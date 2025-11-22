@@ -15,7 +15,7 @@ const SHAPE_SETS: Record<number, string[]> = {
 export default function Tier2Solver() {
   const [puzzleSize, setPuzzleSize] = useState(6)
   const [shapeSet, setShapeSet] = useState(SHAPE_SETS[6])
-  
+
   const [inputSeq, setInputSeq] = useState<string[]>([])
   const [outputSeq, setOutputSeq] = useState<string[]>([])
   const [middleOp, setMiddleOp] = useState("")
@@ -72,9 +72,9 @@ export default function Tier2Solver() {
   function computeFinalCode() {
     if (inputSeq.length !== n || outputSeq.length !== n) return null
     if (middleOp.length !== n) return null
-    
+
     const A = middleOp.split("").map((x) => Number.parseInt(x, 10))
-    
+
     // Validate that the middle operator contains valid numbers for this size
     if (A.length !== n || A.some((x) => isNaN(x) || x < 1 || x > n)) return null
 
@@ -83,22 +83,54 @@ export default function Tier2Solver() {
 
     const renum = buildRenumberMap(QX)
     const codeArr = outputSeq.map((s) => renum[s])
-    
+
     if (codeArr.some((x) => x === undefined)) return null
     return codeArr.join("")
   }
 
-  function matchOptions(code: string | null) {
-    if (!code) return null
-    const opts = optionsText
-      .split(/[\s\n,]+/) // Split by space, newline, or comma
-      .map((x) => x.trim())
-      .filter((x) => x.length)
-    return opts.find((o) => o === code) || null
+  function computeBottomToTopCode() {
+    if (inputSeq.length !== n || outputSeq.length !== n) return null;
+    if (middleOp.length !== n) return null;
+
+    const A = middleOp.split("").map(Number);
+    if (A.some(x => x < 1 || x > n || isNaN(x))) return null;
+
+    // 1. Build top ranks
+    const topRank: Record<string, number> = {};
+    for (let i = 0; i < n; i++) topRank[inputSeq[i]] = i + 1;
+
+    // 2. Convert bottom row into top ranks
+    const bottomRanks = outputSeq.map(s => topRank[s]);
+
+    // 3. Rank positions by bottomRanks
+    const paired = bottomRanks.map((v, i) => ({v, pos: i + 1}));
+    paired.sort((a, b) => a.v - b.v);
+    const rankPos: Record<number, number> = {};
+    paired.forEach((p, i) => (rankPos[p.pos] = i + 1));
+
+    // 4. Compute inverse of A
+    const A_inv = new Array(n+1);
+    for (let i = 0; i < n; i++) A_inv[A[i]] = i + 1;
+
+    // 5. Final[i] = rankPos[A_inv[i]]
+    const final = [];
+    for (let i = 1; i <= n; i++) {
+      final.push(rankPos[A_inv[i]]);
+    }
+
+    return final.join("");
   }
 
+
+
+
+
+
+
+
   const finalCode = computeFinalCode()
-  const matched = matchOptions(finalCode)
+  const bottomToTopCode = computeBottomToTopCode()
+  const matched = matchOptions(finalCode || bottomToTopCode, optionsText)
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -109,7 +141,7 @@ export default function Tier2Solver() {
             <h1 className="text-3xl font-bold text-slate-900 dark:text-white">SwitchChallengeSolver</h1>
             <p className="text-slate-600 dark:text-slate-400 mt-1">Shape Reordering & Renumbering Algorithm</p>
           </div>
-          
+
           {/* Puzzle Size Selector */}
           <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-lg flex gap-1">
             {[4, 5, 6].map((size) => (
@@ -120,10 +152,10 @@ export default function Tier2Solver() {
                   "px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2",
                   puzzleSize === size
                     ? "bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-300 shadow-sm"
-                    : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200",
                 )}
               >
-               {size === 4 ? <Grid3X3 size={16} /> : size === 5 ? <Box size={16} /> : <LayoutGrid size={16} />}
+                {size === 4 ? <Grid3X3 size={16} /> : size === 5 ? <Box size={16} /> : <LayoutGrid size={16} />}
                 {size} Shapes
               </button>
             ))}
@@ -134,11 +166,11 @@ export default function Tier2Solver() {
       {/* Main Content */}
       <div className="flex-1 py-8 px-4">
         <div className="max-w-5xl mx-auto">
-          
           {/* Dynamic Introduction */}
           <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-8">
             <p className="text-sm text-blue-900 dark:text-blue-100">
-              <strong>Current Mode: {puzzleSize} Shapes.</strong> Select shapes in order, then enter the {puzzleSize}-digit operator code (e.g., for 4 shapes: 1324).
+              <strong>Current Mode: {puzzleSize} Shapes.</strong> Select shapes in order, then enter the {puzzleSize}
+              -digit operator code (e.g., for 4 shapes: 1324).
             </p>
           </div>
 
@@ -170,7 +202,9 @@ export default function Tier2Solver() {
               <div className="flex items-center gap-3">
                 <div className="flex-1 p-3 bg-slate-50 dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700 font-mono min-h-[50px] flex items-center">
                   <span className="text-slate-600 dark:text-slate-400 mr-2">Top row: </span>
-                  <span className="font-bold text-xl text-slate-900 dark:text-white tracking-widest">{inputSeq.join(" ") || "—"}</span>
+                  <span className="font-bold text-xl text-slate-900 dark:text-white tracking-widest">
+                    {inputSeq.join(" ") || "—"}
+                  </span>
                 </div>
                 {inputSeq.length > 0 && (
                   <button
@@ -210,7 +244,9 @@ export default function Tier2Solver() {
               <div className="flex items-center gap-3">
                 <div className="flex-1 p-3 bg-slate-100 dark:bg-slate-900 rounded border border-slate-300 dark:border-slate-700 font-mono min-h-[50px] flex items-center">
                   <span className="text-slate-600 dark:text-slate-400 mr-2">Bottom: </span>
-                  <span className="font-bold text-xl text-slate-900 dark:text-white tracking-widest">{outputSeq.join(" ") || "—"}</span>
+                  <span className="font-bold text-xl text-slate-900 dark:text-white tracking-widest">
+                    {outputSeq.join(" ") || "—"}
+                  </span>
                 </div>
                 {outputSeq.length > 0 && (
                   <button
@@ -230,10 +266,11 @@ export default function Tier2Solver() {
                   Step 3: Enter Middle Operator
                 </h2>
                 <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Enter the white box numbers. For {n} shapes, enter {n} digits (e.g., 
+                  Enter the white box numbers. For {n} shapes, enter {n} digits (e.g.,
                   <code className="bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded text-xs font-mono mx-1">
                     {n === 4 ? "1324" : n === 6 ? "241356" : "12345"}
-                  </code>).
+                  </code>
+                  ).
                 </p>
               </div>
 
@@ -251,12 +288,33 @@ export default function Tier2Solver() {
 
             {/* Result Section */}
             <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 rounded-lg shadow-md p-6 border border-green-200 dark:border-green-800">
-              <h2 className="text-lg font-semibold text-green-900 dark:text-green-100 mb-4">Computed Result</h2>
+              <h2 className="text-lg font-semibold text-green-900 dark:text-green-100 mb-4">Computed Results</h2>
 
-              <div className="mb-6">
-                <p className="text-sm text-green-700 dark:text-green-300 mb-2">Final Code:</p>
-                <div className="font-mono text-4xl font-bold p-4 bg-white dark:bg-slate-800 rounded-lg border-2 border-green-300 dark:border-green-700 text-center text-green-600 dark:text-green-400 min-h-24 flex items-center justify-center tracking-[0.2em]">
-                  {finalCode || "—"}
+              <div className="grid md:grid-cols-2 gap-6 mb-6">
+                {/* Top-to-Bottom Approach */}
+                <div className="bg-white dark:bg-slate-800 p-4 rounded-lg border-2 border-blue-300 dark:border-blue-700">
+                  <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 uppercase tracking-wide mb-2">
+                    Top → Bottom Approach
+                  </p>
+                  <div className="font-mono text-3xl font-bold p-4 bg-blue-50 dark:bg-slate-900 rounded border border-blue-200 dark:border-blue-600 text-center text-blue-600 dark:text-blue-400 min-h-20 flex items-center justify-center tracking-[0.2em]">
+                    {finalCode || "—"}
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
+                    Reorder top row by operator A, then renumber by bottom row
+                  </p>
+                </div>
+
+                {/* Bottom-to-Top Approach */}
+                <div className="bg-white dark:bg-slate-800 p-4 rounded-lg border-2 border-purple-300 dark:border-purple-700">
+                  <p className="text-xs font-semibold text-purple-700 dark:text-purple-300 uppercase tracking-wide mb-2">
+                    Bottom → Top Approach
+                  </p>
+                  <div className="font-mono text-3xl font-bold p-4 bg-purple-50 dark:bg-slate-900 rounded border border-purple-200 dark:border-purple-600 text-center text-purple-600 dark:text-purple-400 min-h-20 flex items-center justify-center tracking-[0.2em]">
+                    {bottomToTopCode || "—"}
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
+                    Compute inverse permutation of operator A
+                  </p>
                 </div>
               </div>
 
@@ -277,16 +335,29 @@ export default function Tier2Solver() {
               {matched && (
                 <div className="mt-4 p-4 bg-green-100 dark:bg-green-900 border border-green-400 dark:border-green-700 rounded-lg flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2">
                   <div className="bg-green-500 text-white rounded-full p-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="w-4 h-4"
+                    >
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
                   </div>
                   <p className="text-sm font-bold text-green-800 dark:text-green-100">
                     Match Found: <span className="text-lg ml-1">{matched}</span>
                   </p>
                 </div>
               )}
-              {!matched && finalCode && optionsText.length > 0 && (
+              {!matched && (finalCode || bottomToTopCode) && optionsText.length > 0 && (
                 <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900 border border-amber-300 dark:border-amber-700 rounded-lg">
-                  <p className="text-sm text-amber-800 dark:text-amber-200">⚠ No option matches the computed code</p>
+                  <p className="text-sm text-amber-800 dark:text-amber-200">
+                    ⚠ No option matches either computed approach
+                  </p>
                 </div>
               )}
             </div>
@@ -343,4 +414,13 @@ export default function Tier2Solver() {
       </footer>
     </div>
   )
+}
+
+function matchOptions(code: string | null, optionsText: string) {
+  if (!code || !optionsText) return null
+  const opts = optionsText
+    .split(/[\s\n,]+/) // Split by space, newline, or comma
+    .map((x) => x.trim())
+    .filter((x) => x.length)
+  return opts.find((o) => o === code) || null
 }
