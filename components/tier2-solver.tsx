@@ -1,24 +1,44 @@
 "use client"
 
 import { useState } from "react"
-import { RotateCcw, GitBranch, Coffee } from "lucide-react"
+import { RotateCcw, GitBranch, Coffee, Grid3X3, Box, LayoutGrid } from "lucide-react"
+import { cn } from "@/lib/utils"
 
-const DEFAULT_SHAPES = ["%", "●", "■", "▲", "+", "X"]
+// Define presets for different puzzle sizes
+const SHAPE_SETS: Record<number, string[]> = {
+  3: ["●", "■", "▲"],
+  4: ["+", "▲", "●", "■"], // Matches your screenshot (Cyan, Yellow, Green, Red)
+  5: ["+", "▲", "●", "■", "★"],
+  6: ["%", "●", "■", "▲", "+", "X"], // Original default
+}
 
 export default function Tier2Solver() {
-  const [shapeSet] = useState(DEFAULT_SHAPES)
-  const [inputSeq, setInputSeq] = useState([])
-  const [outputSeq, setOutputSeq] = useState([])
+  const [puzzleSize, setPuzzleSize] = useState(6)
+  const [shapeSet, setShapeSet] = useState(SHAPE_SETS[6])
+  
+  const [inputSeq, setInputSeq] = useState<string[]>([])
+  const [outputSeq, setOutputSeq] = useState<string[]>([])
   const [middleOp, setMiddleOp] = useState("")
   const [optionsText, setOptionsText] = useState("")
 
   const n = shapeSet.length
 
-  function clickInput(s) {
+  // Handle switching puzzle sizes
+  function changeSize(size: number) {
+    setPuzzleSize(size)
+    setShapeSet(SHAPE_SETS[size])
+    // Reset all data when size changes to prevent index errors
+    setInputSeq([])
+    setOutputSeq([])
+    setMiddleOp("")
+    setOptionsText("")
+  }
+
+  function clickInput(s: string) {
     if (inputSeq.length < n) setInputSeq([...inputSeq, s])
   }
 
-  function clickOutput(s) {
+  function clickOutput(s: string) {
     if (outputSeq.length < n) setOutputSeq([...outputSeq, s])
   }
 
@@ -30,6 +50,7 @@ export default function Tier2Solver() {
     setOutputSeq(outputSeq.slice(0, -1))
   }
 
+  // FIXED: Corrected function name from functionLxResetAll to resetAll
   function resetAll() {
     setInputSeq([])
     setOutputSeq([])
@@ -37,13 +58,13 @@ export default function Tier2Solver() {
     setOptionsText("")
   }
 
-  function reorderTopByA(T, A) {
+  function reorderTopByA(T: string[], A: number[]) {
     if (!T || !A || T.length !== A.length) return null
     return A.map((idx) => T[idx - 1])
   }
 
-  function buildRenumberMap(Tprime) {
-    const map = {}
+  function buildRenumberMap(Tprime: string[]) {
+    const map: Record<string, number> = {}
     for (let i = 0; i < Tprime.length; i++) map[Tprime[i]] = i + 1
     return map
   }
@@ -51,20 +72,26 @@ export default function Tier2Solver() {
   function computeFinalCode() {
     if (inputSeq.length !== n || outputSeq.length !== n) return null
     if (middleOp.length !== n) return null
+    
     const A = middleOp.split("").map((x) => Number.parseInt(x, 10))
+    
+    // Validate that the middle operator contains valid numbers for this size
     if (A.length !== n || A.some((x) => isNaN(x) || x < 1 || x > n)) return null
 
-    const Tprime = reorderTopByA(inputSeq, A)
-    const renum = buildRenumberMap(Tprime)
+    const QX = reorderTopByA(inputSeq, A)
+    if (!QX) return null
+
+    const renum = buildRenumberMap(QX)
     const codeArr = outputSeq.map((s) => renum[s])
+    
     if (codeArr.some((x) => x === undefined)) return null
     return codeArr.join("")
   }
 
-  function matchOptions(code) {
+  function matchOptions(code: string | null) {
     if (!code) return null
     const opts = optionsText
-      .split(/\s+/)
+      .split(/[\s\n,]+/) // Split by space, newline, or comma
       .map((x) => x.trim())
       .filter((x) => x.length)
     return opts.find((o) => o === code) || null
@@ -77,10 +104,29 @@ export default function Tier2Solver() {
     <div className="min-h-screen flex flex-col">
       {/* Header */}
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-6 py-4">
+        <div className="max-w-5xl mx-auto px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 dark:text-white">SwitchChallengeSolver</h1>
             <p className="text-slate-600 dark:text-slate-400 mt-1">Shape Reordering & Renumbering Algorithm</p>
+          </div>
+          
+          {/* Puzzle Size Selector */}
+          <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-lg flex gap-1">
+            {[4, 5, 6].map((size) => (
+              <button
+                key={size}
+                onClick={() => changeSize(size)}
+                className={cn(
+                  "px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2",
+                  puzzleSize === size
+                    ? "bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-300 shadow-sm"
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                )}
+              >
+               {size === 4 ? <Grid3X3 size={16} /> : size === 5 ? <Box size={16} /> : <LayoutGrid size={16} />}
+                {size} Shapes
+              </button>
+            ))}
           </div>
         </div>
       </header>
@@ -88,12 +134,11 @@ export default function Tier2Solver() {
       {/* Main Content */}
       <div className="flex-1 py-8 px-4">
         <div className="max-w-5xl mx-auto">
-          {/* Introduction */}
+          
+          {/* Dynamic Introduction */}
           <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-8">
             <p className="text-sm text-blue-900 dark:text-blue-100">
-              <strong>How it works:</strong> Select shapes from the top row in the exact order shown in your puzzle.
-              Then select shapes from the bottom row. Enter the middle operator (white box), and the solver will compute
-              the final code using the reordering and renumbering algorithm.
+              <strong>Current Mode: {puzzleSize} Shapes.</strong> Select shapes in order, then enter the {puzzleSize}-digit operator code (e.g., for 4 shapes: 1324).
             </p>
           </div>
 
@@ -115,22 +160,22 @@ export default function Tier2Solver() {
                     key={i}
                     onClick={() => clickInput(s)}
                     disabled={inputSeq.length >= n}
-                    className="px-5 py-4 border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-16 h-16 md:w-20 md:h-20 text-3xl border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                   >
-                    <span className="text-3xl">{s}</span>
+                    {s}
                   </button>
                 ))}
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="flex-1 p-3 bg-slate-50 dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700 font-mono">
-                  <span className="text-slate-600 dark:text-slate-400">Top row: </span>
-                  <span className="font-semibold text-slate-900 dark:text-white">{inputSeq.join(" ") || "—"}</span>
+                <div className="flex-1 p-3 bg-slate-50 dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700 font-mono min-h-[50px] flex items-center">
+                  <span className="text-slate-600 dark:text-slate-400 mr-2">Top row: </span>
+                  <span className="font-bold text-xl text-slate-900 dark:text-white tracking-widest">{inputSeq.join(" ") || "—"}</span>
                 </div>
                 {inputSeq.length > 0 && (
                   <button
                     onClick={removeLastInput}
-                    className="px-3 py-2 text-sm bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-200 rounded hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors"
+                    className="px-4 py-2 text-sm bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-200 rounded hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors"
                   >
                     Undo
                   </button>
@@ -155,22 +200,22 @@ export default function Tier2Solver() {
                     key={i}
                     onClick={() => clickOutput(s)}
                     disabled={outputSeq.length >= n}
-                    className="px-5 py-4 border-2 border-slate-400 dark:border-slate-500 rounded-lg bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-16 h-16 md:w-20 md:h-20 text-3xl border-2 border-slate-400 dark:border-slate-500 rounded-lg bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                   >
-                    <span className="text-3xl">{s}</span>
+                    {s}
                   </button>
                 ))}
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="flex-1 p-3 bg-slate-100 dark:bg-slate-900 rounded border border-slate-300 dark:border-slate-700 font-mono">
-                  <span className="text-slate-600 dark:text-slate-400">Bottom row: </span>
-                  <span className="font-semibold text-slate-900 dark:text-white">{outputSeq.join(" ") || "—"}</span>
+                <div className="flex-1 p-3 bg-slate-100 dark:bg-slate-900 rounded border border-slate-300 dark:border-slate-700 font-mono min-h-[50px] flex items-center">
+                  <span className="text-slate-600 dark:text-slate-400 mr-2">Bottom: </span>
+                  <span className="font-bold text-xl text-slate-900 dark:text-white tracking-widest">{outputSeq.join(" ") || "—"}</span>
                 </div>
                 {outputSeq.length > 0 && (
                   <button
                     onClick={removeLastOutput}
-                    className="px-3 py-2 text-sm bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-200 rounded hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors"
+                    className="px-4 py-2 text-sm bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-200 rounded hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors"
                   >
                     Undo
                   </button>
@@ -185,20 +230,22 @@ export default function Tier2Solver() {
                   Step 3: Enter Middle Operator
                 </h2>
                 <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Paste the white box operator (e.g.,{" "}
-                  <code className="bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded text-xs font-mono">241356</code>).
+                  Enter the white box numbers. For {n} shapes, enter {n} digits (e.g., 
+                  <code className="bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded text-xs font-mono mx-1">
+                    {n === 4 ? "1324" : n === 6 ? "241356" : "12345"}
+                  </code>).
                 </p>
               </div>
 
               <input
                 value={middleOp}
                 onChange={(e) => setMiddleOp(e.target.value.replace(/[^0-9]/g, ""))}
-                placeholder="241356"
+                placeholder={n === 4 ? "1324" : n === 6 ? "241356" : "12345"}
                 maxLength={n}
-                className="w-full max-w-xs px-4 py-2 border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none transition-colors"
+                className="w-full max-w-xs px-4 py-3 text-lg tracking-widest border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none transition-colors"
               />
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                Must be {n} digits between 1-{n}
+                {middleOp.length}/{n} digits entered
               </p>
             </div>
 
@@ -208,7 +255,7 @@ export default function Tier2Solver() {
 
               <div className="mb-6">
                 <p className="text-sm text-green-700 dark:text-green-300 mb-2">Final Code:</p>
-                <div className="font-mono text-4xl font-bold p-4 bg-white dark:bg-slate-800 rounded-lg border-2 border-green-300 dark:border-green-700 text-center text-green-600 dark:text-green-400 min-h-20 flex items-center justify-center">
+                <div className="font-mono text-4xl font-bold p-4 bg-white dark:bg-slate-800 rounded-lg border-2 border-green-300 dark:border-green-700 text-center text-green-600 dark:text-green-400 min-h-24 flex items-center justify-center tracking-[0.2em]">
                   {finalCode || "—"}
                 </div>
               </div>
@@ -221,20 +268,23 @@ export default function Tier2Solver() {
                 <textarea
                   value={optionsText}
                   onChange={(e) => setOptionsText(e.target.value)}
-                  placeholder="345126 215436 534126 326451"
-                  className="w-full px-4 py-3 border-2 border-green-300 dark:border-green-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-green-500 dark:focus:border-green-400 focus:outline-none transition-colors resize-none"
-                  rows={4}
+                  placeholder={n === 4 ? "1243 3412 4231 1234" : "345126 215436 534126"}
+                  className="w-full px-4 py-3 border-2 border-green-300 dark:border-green-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-green-500 dark:focus:border-green-400 focus:outline-none transition-colors resize-none font-mono text-sm"
+                  rows={3}
                 />
               </div>
 
               {matched && (
-                <div className="mt-4 p-4 bg-green-100 dark:bg-green-900 border border-green-400 dark:border-green-700 rounded-lg">
-                  <p className="text-sm font-semibold text-green-800 dark:text-green-200">
-                    ✓ Match Found: <span className="font-mono text-lg">{matched}</span>
+                <div className="mt-4 p-4 bg-green-100 dark:bg-green-900 border border-green-400 dark:border-green-700 rounded-lg flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2">
+                  <div className="bg-green-500 text-white rounded-full p-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  </div>
+                  <p className="text-sm font-bold text-green-800 dark:text-green-100">
+                    Match Found: <span className="text-lg ml-1">{matched}</span>
                   </p>
                 </div>
               )}
-              {!matched && finalCode && (
+              {!matched && finalCode && optionsText.length > 0 && (
                 <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900 border border-amber-300 dark:border-amber-700 rounded-lg">
                   <p className="text-sm text-amber-800 dark:text-amber-200">⚠ No option matches the computed code</p>
                 </div>
@@ -288,13 +338,6 @@ export default function Tier2Solver() {
                 Buy Me a Coffee
               </a>
             </div>
-          </div>
-
-          <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-800">
-            <p className="text-xs text-slate-500 dark:text-slate-600">
-              Algorithm: Reorder top row using operator A → Renumber positions 1..{n} → Map bottom row shapes to new
-              numbers
-            </p>
           </div>
         </div>
       </footer>
