@@ -1,15 +1,15 @@
 "use client"
 
 import { useState } from "react"
-import { RotateCcw, GitBranch, Coffee, Grid3X3, Box, LayoutGrid } from "lucide-react"
+import { RotateCcw, GitBranch, Coffee } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 // Define presets for different puzzle sizes
 const SHAPE_SETS: Record<number, string[]> = {
   3: ["●", "■", "▲"],
-  4: ["+", "▲", "●", "■"], // Matches your screenshot (Cyan, Yellow, Green, Red)
+  4: ["+", "▲", "●", "■"],
   5: ["+", "▲", "●", "■", "★"],
-  6: ["%", "●", "■", "▲", "+", "X"], // Original default
+  6: ["%", "●", "■", "▲", "+", "X"],
 }
 
 export default function Tier2Solver() {
@@ -23,11 +23,9 @@ export default function Tier2Solver() {
 
   const n = shapeSet.length
 
-  // Handle switching puzzle sizes
   function changeSize(size: number) {
     setPuzzleSize(size)
     setShapeSet(SHAPE_SETS[size])
-    // Reset all data when size changes to prevent index errors
     setInputSeq([])
     setOutputSeq([])
     setMiddleOp("")
@@ -50,7 +48,6 @@ export default function Tier2Solver() {
     setOutputSeq(outputSeq.slice(0, -1))
   }
 
-  // FIXED: Corrected function name from functionLxResetAll to resetAll
   function resetAll() {
     setInputSeq([])
     setOutputSeq([])
@@ -75,7 +72,6 @@ export default function Tier2Solver() {
 
     const A = middleOp.split("").map((x) => Number.parseInt(x, 10))
 
-    // Validate that the middle operator contains valid numbers for this size
     if (A.length !== n || A.some((x) => isNaN(x) || x < 1 || x > n)) return null
 
     const QX = reorderTopByA(inputSeq, A)
@@ -89,74 +85,60 @@ export default function Tier2Solver() {
   }
 
   function computeBottomToTopCode() {
-    if (inputSeq.length !== n || outputSeq.length !== n) return null;
-    if (middleOp.length !== n) return null;
+    if (inputSeq.length !== n || outputSeq.length !== n) return null
+    if (middleOp.length !== n) return null
 
-    const A = middleOp.split("").map(Number);
-    if (A.some(x => x < 1 || x > n || isNaN(x))) return null;
+    const A = middleOp.split("").map(Number)
+    if (A.some((x) => x < 1 || x > n || isNaN(x))) return null
 
-    // 1. Build top ranks
-    const topRank: Record<string, number> = {};
-    for (let i = 0; i < n; i++) topRank[inputSeq[i]] = i + 1;
+    const topRank: Record<string, number> = {}
+    for (let i = 0; i < n; i++) topRank[inputSeq[i]] = i + 1
 
-    // 2. Convert bottom row into top ranks
-    const bottomRanks = outputSeq.map(s => topRank[s]);
+    const bottomRanks = outputSeq.map((s) => topRank[s])
 
-    // 3. Rank positions by bottomRanks
-    const paired = bottomRanks.map((v, i) => ({v, pos: i + 1}));
-    paired.sort((a, b) => a.v - b.v);
-    const rankPos: Record<number, number> = {};
-    paired.forEach((p, i) => (rankPos[p.pos] = i + 1));
+    const paired = bottomRanks.map((v, i) => ({ v, pos: i + 1 }))
+    paired.sort((a, b) => a.v - b.v)
+    const rankPos: Record<number, number> = {}
+    paired.forEach((p, i) => (rankPos[p.pos] = i + 1))
 
-    // 4. Compute inverse of A
-    const A_inv = new Array(n+1);
-    for (let i = 0; i < n; i++) A_inv[A[i]] = i + 1;
+    const A_inv = new Array(n + 1)
+    for (let i = 0; i < n; i++) A_inv[A[i]] = i + 1
 
-    // 5. Final[i] = rankPos[A_inv[i]]
-    const final = [];
+    const final = []
     for (let i = 1; i <= n; i++) {
-      final.push(rankPos[A_inv[i]]);
+      final.push(rankPos[A_inv[i]])
     }
 
-    return final.join("");
+    return final.join("")
   }
-
-
-
-
-
-
-
 
   const finalCode = computeFinalCode()
   const bottomToTopCode = computeBottomToTopCode()
   const matched = matchOptions(finalCode || bottomToTopCode, optionsText)
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950">
+      {/* Compact Header */}
+      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10 py-2 md:py-3 px-3 md:px-6">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">SwitchChallengeSolver</h1>
-            <p className="text-slate-600 dark:text-slate-400 mt-1">Shape Reordering & Renumbering Algorithm</p>
+            <h1 className="text-lg md:text-2xl font-bold text-slate-900 dark:text-white">SwitchChallengeSolver</h1>
+            <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400">Shape Reordering & Renumbering</p>
           </div>
 
-          {/* Puzzle Size Selector */}
-          <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-lg flex gap-1">
+          <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-lg flex gap-1 flex-shrink-0">
             {[4, 5, 6].map((size) => (
               <button
                 key={size}
                 onClick={() => changeSize(size)}
                 className={cn(
-                  "px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2",
+                  "px-2.5 md:px-3 py-1 rounded text-xs md:text-sm font-medium transition-all",
                   puzzleSize === size
                     ? "bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-300 shadow-sm"
                     : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200",
                 )}
               >
-                {size === 4 ? <Grid3X3 size={16} /> : size === 5 ? <Box size={16} /> : <LayoutGrid size={16} />}
-                {size} Shapes
+                {size}
               </button>
             ))}
           </div>
@@ -164,249 +146,181 @@ export default function Tier2Solver() {
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 py-8 px-4">
-        <div className="max-w-5xl mx-auto">
-          {/* Dynamic Introduction */}
-          <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-8">
-            <p className="text-sm text-blue-900 dark:text-blue-100">
-              <strong>Current Mode: {puzzleSize} Shapes.</strong> Select shapes in order, then enter the {puzzleSize}
-              -digit operator code (e.g., for 4 shapes: 1324).
+      <div className="flex-1 py-2 md:py-4 px-3 md:px-4">
+        <div className="max-w-5xl mx-auto space-y-2 md:space-y-3">
+          {/* Step 1: Top Row */}
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-2 md:p-3">
+            <h2 className="text-sm md:text-base font-semibold text-blue-900 dark:text-blue-100 mb-2">Top Row</h2>
+
+            <div className="flex gap-1.5 md:gap-2 flex-wrap mb-2">
+              {shapeSet.map((s, i) => (
+                <button
+                  key={i}
+                  onClick={() => clickInput(s)}
+                  disabled={inputSeq.length >= n}
+                  className="w-10 h-10 md:w-12 md:h-12 text-xl md:text-2xl border-2 border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex gap-1.5 items-center">
+              <div className="flex-1 p-2 bg-blue-50 dark:bg-slate-900 rounded border border-blue-200 dark:border-blue-700 font-mono text-sm md:text-base font-bold text-blue-600 dark:text-blue-400 tracking-widest min-h-9 flex items-center">
+                {inputSeq.join(" ") || "—"}
+              </div>
+              {inputSeq.length > 0 && (
+                <button
+                  onClick={removeLastInput}
+                  className="px-2 py-1.5 text-xs bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-200 rounded hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors flex-shrink-0"
+                >
+                  Undo
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Step 2: Bottom Row */}
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-2 md:p-3">
+            <h2 className="text-sm md:text-base font-semibold text-slate-900 dark:text-slate-100 mb-2">Bottom Row</h2>
+
+            <div className="flex gap-1.5 md:gap-2 flex-wrap mb-2">
+              {shapeSet.map((s, i) => (
+                <button
+                  key={i}
+                  onClick={() => clickOutput(s)}
+                  disabled={outputSeq.length >= n}
+                  className="w-10 h-10 md:w-12 md:h-12 text-xl md:text-2xl border-2 border-slate-400 dark:border-slate-500 rounded bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex gap-1.5 items-center">
+              <div className="flex-1 p-2 bg-slate-100 dark:bg-slate-900 rounded border border-slate-300 dark:border-slate-700 font-mono text-sm md:text-base font-bold text-slate-900 dark:text-slate-100 tracking-widest min-h-9 flex items-center">
+                {outputSeq.join(" ") || "—"}
+              </div>
+              {outputSeq.length > 0 && (
+                <button
+                  onClick={removeLastOutput}
+                  className="px-2 py-1.5 text-xs bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-200 rounded hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors flex-shrink-0"
+                >
+                  Undo
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Step 3: Operator */}
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-2 md:p-3">
+            <h2 className="text-sm md:text-base font-semibold text-purple-900 dark:text-purple-100 mb-2">Operator</h2>
+
+            <input
+              value={middleOp}
+              onChange={(e) => setMiddleOp(e.target.value.replace(/[^0-9]/g, ""))}
+              placeholder={n === 4 ? "1324" : n === 6 ? "241356" : "12345"}
+              maxLength={n}
+              className="w-full px-2 md:px-3 py-2 text-base md:text-lg tracking-widest border-2 border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-purple-500 dark:focus:border-purple-400 focus:outline-none"
+            />
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              {middleOp.length}/{n}
             </p>
           </div>
 
-          <div className="grid gap-8">
-            {/* Section 1: Top Row Selection */}
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6 border border-slate-200 dark:border-slate-700">
-              <div className="mb-4">
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
-                  Step 1: Select Top Row Shapes
-                </h2>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Click each shape in the order they appear in the puzzle's top row.
-                </p>
+          {/* Results Section */}
+          {(finalCode || bottomToTopCode) && (
+            <div className="bg-green-50 dark:bg-green-950 rounded-lg border-2 border-green-200 dark:border-green-800">
+              <div className="px-2 md:px-3 py-2 bg-green-100 dark:bg-green-900 border-b border-green-200 dark:border-green-800">
+                <h2 className="text-sm md:text-base font-semibold text-green-900 dark:text-green-100">Results</h2>
               </div>
 
-              <div className="flex gap-3 flex-wrap mb-4">
-                {shapeSet.map((s, i) => (
-                  <button
-                    key={i}
-                    onClick={() => clickInput(s)}
-                    disabled={inputSeq.length >= n}
-                    className="w-16 h-16 md:w-20 md:h-20 text-3xl border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
+              <div className="px-2 md:px-3 py-2 space-y-1.5">
+                <div className="grid grid-cols-2 gap-1.5">
+                  <div className="bg-white dark:bg-slate-800 p-2 rounded border border-blue-300 dark:border-blue-700">
+                    <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-1">Top→Bottom</p>
+                    <div className="font-mono text-lg md:text-xl font-bold text-blue-600 dark:text-blue-400 text-center tracking-widest">
+                      {finalCode || "—"}
+                    </div>
+                  </div>
 
-              <div className="flex items-center gap-3">
-                <div className="flex-1 p-3 bg-slate-50 dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700 font-mono min-h-[50px] flex items-center">
-                  <span className="text-slate-600 dark:text-slate-400 mr-2">Top row: </span>
-                  <span className="font-bold text-xl text-slate-900 dark:text-white tracking-widest">
-                    {inputSeq.join(" ") || "—"}
-                  </span>
+                  <div className="bg-white dark:bg-slate-800 p-2 rounded border border-purple-300 dark:border-purple-700">
+                    <p className="text-xs font-semibold text-purple-700 dark:text-purple-300 mb-1">Bottom→Top</p>
+                    <div className="font-mono text-lg md:text-xl font-bold text-purple-600 dark:text-purple-400 text-center tracking-widest">
+                      {bottomToTopCode || "—"}
+                    </div>
+                  </div>
                 </div>
-                {inputSeq.length > 0 && (
-                  <button
-                    onClick={removeLastInput}
-                    className="px-4 py-2 text-sm bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-200 rounded hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors"
-                  >
-                    Undo
-                  </button>
+
+                {/* MCQ Options */}
+                <div className="pt-1.5 border-t border-green-200 dark:border-green-800">
+                  <label className="block text-xs font-medium text-green-900 dark:text-green-100 mb-1">
+                    MCQ Options
+                  </label>
+                  <textarea
+                    value={optionsText}
+                    onChange={(e) => setOptionsText(e.target.value)}
+                    placeholder="Enter options"
+                    className="w-full px-2 py-1.5 text-xs border-2 border-green-300 dark:border-green-700 rounded bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-green-500 dark:focus:border-green-400 focus:outline-none resize-none font-mono"
+                    rows={2}
+                  />
+                </div>
+
+                {/* Match Result */}
+                {matched && (
+                  <div className="p-2 bg-green-100 dark:bg-green-900 border border-green-400 dark:border-green-700 rounded flex items-center gap-2 text-xs">
+                    <span className="bg-green-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs flex-shrink-0 font-bold">
+                      ✓
+                    </span>
+                    <p className="font-bold text-green-800 dark:text-green-100">
+                      Match: <span>{matched}</span>
+                    </p>
+                  </div>
+                )}
+                {!matched && optionsText.length > 0 && (
+                  <div className="p-2 bg-amber-50 dark:bg-amber-900 border border-amber-300 dark:border-amber-700 rounded text-xs text-amber-800 dark:text-amber-200">
+                    ⚠ No match found
+                  </div>
                 )}
               </div>
             </div>
+          )}
 
-            {/* Section 2: Bottom Row Selection */}
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6 border border-slate-200 dark:border-slate-700">
-              <div className="mb-4">
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
-                  Step 2: Select Bottom Row Shapes
-                </h2>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Click each shape in the order they appear in the puzzle's bottom row.
-                </p>
-              </div>
-
-              <div className="flex gap-3 flex-wrap mb-4">
-                {shapeSet.map((s, i) => (
-                  <button
-                    key={i}
-                    onClick={() => clickOutput(s)}
-                    disabled={outputSeq.length >= n}
-                    className="w-16 h-16 md:w-20 md:h-20 text-3xl border-2 border-slate-400 dark:border-slate-500 rounded-lg bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="flex-1 p-3 bg-slate-100 dark:bg-slate-900 rounded border border-slate-300 dark:border-slate-700 font-mono min-h-[50px] flex items-center">
-                  <span className="text-slate-600 dark:text-slate-400 mr-2">Bottom: </span>
-                  <span className="font-bold text-xl text-slate-900 dark:text-white tracking-widest">
-                    {outputSeq.join(" ") || "—"}
-                  </span>
-                </div>
-                {outputSeq.length > 0 && (
-                  <button
-                    onClick={removeLastOutput}
-                    className="px-4 py-2 text-sm bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-200 rounded hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors"
-                  >
-                    Undo
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Section 3: Middle Operator */}
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6 border border-slate-200 dark:border-slate-700">
-              <div className="mb-4">
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
-                  Step 3: Enter Middle Operator
-                </h2>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Enter the white box numbers. For {n} shapes, enter {n} digits (e.g.,
-                  <code className="bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded text-xs font-mono mx-1">
-                    {n === 4 ? "1324" : n === 6 ? "241356" : "12345"}
-                  </code>
-                  ).
-                </p>
-              </div>
-
-              <input
-                value={middleOp}
-                onChange={(e) => setMiddleOp(e.target.value.replace(/[^0-9]/g, ""))}
-                placeholder={n === 4 ? "1324" : n === 6 ? "241356" : "12345"}
-                maxLength={n}
-                className="w-full max-w-xs px-4 py-3 text-lg tracking-widest border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none transition-colors"
-              />
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                {middleOp.length}/{n} digits entered
-              </p>
-            </div>
-
-            {/* Result Section */}
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 rounded-lg shadow-md p-6 border border-green-200 dark:border-green-800">
-              <h2 className="text-lg font-semibold text-green-900 dark:text-green-100 mb-4">Computed Results</h2>
-
-              <div className="grid md:grid-cols-2 gap-6 mb-6">
-                {/* Top-to-Bottom Approach */}
-                <div className="bg-white dark:bg-slate-800 p-4 rounded-lg border-2 border-blue-300 dark:border-blue-700">
-                  <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 uppercase tracking-wide mb-2">
-                    Top → Bottom Approach
-                  </p>
-                  <div className="font-mono text-3xl font-bold p-4 bg-blue-50 dark:bg-slate-900 rounded border border-blue-200 dark:border-blue-600 text-center text-blue-600 dark:text-blue-400 min-h-20 flex items-center justify-center tracking-[0.2em]">
-                    {finalCode || "—"}
-                  </div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
-                    Reorder top row by operator A, then renumber by bottom row
-                  </p>
-                </div>
-
-                {/* Bottom-to-Top Approach */}
-                <div className="bg-white dark:bg-slate-800 p-4 rounded-lg border-2 border-purple-300 dark:border-purple-700">
-                  <p className="text-xs font-semibold text-purple-700 dark:text-purple-300 uppercase tracking-wide mb-2">
-                    Bottom → Top Approach
-                  </p>
-                  <div className="font-mono text-3xl font-bold p-4 bg-purple-50 dark:bg-slate-900 rounded border border-purple-200 dark:border-purple-600 text-center text-purple-600 dark:text-purple-400 min-h-20 flex items-center justify-center tracking-[0.2em]">
-                    {bottomToTopCode || "—"}
-                  </div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
-                    Compute inverse permutation of operator A
-                  </p>
-                </div>
-              </div>
-
-              {/* MCQ Options */}
-              <div className="mt-6 pt-6 border-t border-green-200 dark:border-green-800">
-                <label className="block text-sm font-medium text-green-900 dark:text-green-100 mb-3">
-                  Paste MCQ Options (space or line separated)
-                </label>
-                <textarea
-                  value={optionsText}
-                  onChange={(e) => setOptionsText(e.target.value)}
-                  placeholder={n === 4 ? "1243 3412 4231 1234" : "345126 215436 534126"}
-                  className="w-full px-4 py-3 border-2 border-green-300 dark:border-green-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-green-500 dark:focus:border-green-400 focus:outline-none transition-colors resize-none font-mono text-sm"
-                  rows={3}
-                />
-              </div>
-
-              {matched && (
-                <div className="mt-4 p-4 bg-green-100 dark:bg-green-900 border border-green-400 dark:border-green-700 rounded-lg flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2">
-                  <div className="bg-green-500 text-white rounded-full p-1">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="w-4 h-4"
-                    >
-                      <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
-                  </div>
-                  <p className="text-sm font-bold text-green-800 dark:text-green-100">
-                    Match Found: <span className="text-lg ml-1">{matched}</span>
-                  </p>
-                </div>
-              )}
-              {!matched && (finalCode || bottomToTopCode) && optionsText.length > 0 && (
-                <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900 border border-amber-300 dark:border-amber-700 rounded-lg">
-                  <p className="text-sm text-amber-800 dark:text-amber-200">
-                    ⚠ No option matches either computed approach
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-3 mt-8">
-            <button
-              onClick={resetAll}
-              className="flex items-center gap-2 px-4 py-3 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded-lg hover:bg-red-200 dark:hover:bg-red-800 font-medium transition-colors"
-            >
-              <RotateCcw size={18} />
-              Reset All
-            </button>
-          </div>
+          {/* Reset Button */}
+          <button
+            onClick={resetAll}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded-lg hover:bg-red-200 dark:hover:bg-red-800 font-medium transition-colors text-sm"
+          >
+            <RotateCcw size={16} />
+            Reset
+          </button>
         </div>
       </div>
 
       {/* Footer */}
-      <footer className="bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 mt-12">
-        <div className="max-w-5xl mx-auto px-6 py-8">
-          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-6">
-            <div>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
-                <strong>Created by Jefino</strong>
-              </p>
-              <p className="text-xs text-slate-500 dark:text-slate-500">
-                A powerful solver for shape reordering and renumbering puzzles
-              </p>
-            </div>
+      <footer className="bg-slate-100 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 mt-2">
+        <div className="max-w-5xl mx-auto px-3 md:px-6 py-2 md:py-3">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+          
 
-            <div className="flex gap-4">
+            <div className="flex gap-1.5 flex-wrap">
               <a
                 href="https://github.com/Jefino9488"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2 bg-slate-800 dark:bg-slate-700 text-white rounded-lg hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors text-sm font-medium"
+                className="flex items-center gap-1 px-2 py-1.5 text-xs bg-slate-800 dark:bg-slate-700 text-white rounded hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors font-medium"
               >
-                <GitBranch size={16} />
+                <GitBranch size={14} />
                 GitHub
               </a>
               <a
                 href="https://buymeacoffee.com/jefino"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium"
+                className="flex items-center gap-1 px-2 py-1.5 text-xs bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors font-medium"
               >
-                <Coffee size={16} />
-                Buy Me a Coffee
+                <Coffee size={14} />
+                Coffee
               </a>
             </div>
           </div>
@@ -419,7 +333,7 @@ export default function Tier2Solver() {
 function matchOptions(code: string | null, optionsText: string) {
   if (!code || !optionsText) return null
   const opts = optionsText
-    .split(/[\s\n,]+/) // Split by space, newline, or comma
+    .split(/[\s\n,]+/)
     .map((x) => x.trim())
     .filter((x) => x.length)
   return opts.find((o) => o === code) || null
