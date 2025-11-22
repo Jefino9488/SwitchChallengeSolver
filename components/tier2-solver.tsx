@@ -79,8 +79,8 @@ export default function Tier2Solver() {
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-6 py-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Tier-2 Solver</h1>
-            <p className="text-slate-600 dark:text-slate-400 mt-1">CTS Reordering & Renumbering Algorithm</p>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">SwitchChallengeSolver</h1>
+            <p className="text-slate-600 dark:text-slate-400 mt-1">Shape Reordering & Renumbering Algorithm</p>
           </div>
         </div>
       </header>
@@ -264,7 +264,7 @@ export default function Tier2Solver() {
                 <strong>Created by Jefino</strong>
               </p>
               <p className="text-xs text-slate-500 dark:text-slate-500">
-                A powerful solver for CTS reordering and renumbering puzzles
+                A powerful solver for shape reordering and renumbering puzzles
               </p>
             </div>
 
