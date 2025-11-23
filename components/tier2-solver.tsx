@@ -19,6 +19,7 @@ export default function Tier2Solver() {
   const [inputSeq, setInputSeq] = useState<string[]>([])
   const [outputSeq, setOutputSeq] = useState<string[]>([])
   const [middleOp, setMiddleOp] = useState("")
+  const [middleOp2, setMiddleOp2] = useState("")
   const [optionsText, setOptionsText] = useState("")
 
   const n = shapeSet.length
@@ -29,6 +30,7 @@ export default function Tier2Solver() {
     setInputSeq([])
     setOutputSeq([])
     setMiddleOp("")
+    setMiddleOp2("")
     setOptionsText("")
   }
 
@@ -52,6 +54,7 @@ export default function Tier2Solver() {
     setInputSeq([])
     setOutputSeq([])
     setMiddleOp("")
+    setMiddleOp2("")
     setOptionsText("")
   }
 
@@ -60,18 +63,22 @@ export default function Tier2Solver() {
     return A.map((idx) => T[idx - 1])
   }
 
+  function applyOp(T: string[], A: number[]) {
+    return A.map((i) => T[i - 1])
+  }
+
   function buildRenumberMap(Tprime: string[]) {
     const map: Record<string, number> = {}
     for (let i = 0; i < Tprime.length; i++) map[Tprime[i]] = i + 1
     return map
   }
 
+  // ORIGINAL WORKING TOP→BOTTOM (single-op)
   function computeFinalCode() {
     if (inputSeq.length !== n || outputSeq.length !== n) return null
     if (middleOp.length !== n) return null
 
     const A = middleOp.split("").map((x) => Number.parseInt(x, 10))
-
     if (A.length !== n || A.some((x) => isNaN(x) || x < 1 || x > n)) return null
 
     const QX = reorderTopByA(inputSeq, A)
@@ -84,6 +91,7 @@ export default function Tier2Solver() {
     return codeArr.join("")
   }
 
+  // ORIGINAL WORKING BOTTOM→TOP (single-op)
   function computeBottomToTopCode() {
     if (inputSeq.length !== n || outputSeq.length !== n) return null
     if (middleOp.length !== n) return null
@@ -95,9 +103,9 @@ export default function Tier2Solver() {
     for (let i = 0; i < n; i++) topRank[inputSeq[i]] = i + 1
 
     const bottomRanks = outputSeq.map((s) => topRank[s])
-
     const paired = bottomRanks.map((v, i) => ({ v, pos: i + 1 }))
     paired.sort((a, b) => a.v - b.v)
+
     const rankPos: Record<number, number> = {}
     paired.forEach((p, i) => (rankPos[p.pos] = i + 1))
 
@@ -105,20 +113,66 @@ export default function Tier2Solver() {
     for (let i = 0; i < n; i++) A_inv[A[i]] = i + 1
 
     const final = []
-    for (let i = 1; i <= n; i++) {
-      final.push(rankPos[A_inv[i]])
-    }
+    for (let i = 1; i <= n; i++) final.push(rankPos[A_inv[i]])
 
     return final.join("")
   }
 
-  const finalCode = computeFinalCode()
-  const bottomToTopCode = computeBottomToTopCode()
+  // NEW — TWO OP TOP→BOTTOM
+  function computeFinalCodeTwoOps() {
+    if (inputSeq.length !== n || outputSeq.length !== n) return null
+    if (middleOp.length !== n || middleOp2.length !== n) return null
+
+    const A1 = middleOp.split("").map(Number)
+    const A2 = middleOp2.split("").map(Number)
+
+    const after1 = applyOp(inputSeq, A1)
+    const after2 = applyOp(after1, A2)
+
+    const renum = buildRenumberMap(after2)
+    const code = outputSeq.map((s) => renum[s]).join("")
+
+    return code
+  }
+
+  // NEW — TWO OP BOTTOM→TOP
+  function computeBottomToTopTwoOps() {
+    if (inputSeq.length !== n || outputSeq.length !== n) return null
+    if (middleOp.length !== n || middleOp2.length !== n) return null
+
+    const inv = (A: number[]) => {
+      const out = Array(n + 1)
+      for (let i = 0; i < n; i++) out[A[i]] = i + 1
+      return out
+    }
+
+    const A1 = middleOp.split("").map(Number)
+    const A2 = middleOp2.split("").map(Number)
+
+    const A2inv = inv(A2)
+    const A1inv = inv(A1)
+
+    const rank: Record<string, number> = {}
+    inputSeq.forEach((s, i) => (rank[s] = i + 1))
+
+    const bottomRanks = outputSeq.map((s) => rank[s])
+
+    const afterA2 = bottomRanks.map((_, i) => bottomRanks[A2inv[i + 1] - 1])
+    const afterA1 = afterA2.map((_, i) => afterA2[A1inv[i + 1] - 1])
+
+    return afterA1.join("")
+  }
+
+  // SELECT BEST AVAILABLE RESULT
+  const finalCode = computeFinalCodeTwoOps() || computeFinalCode() || null
+
+  const bottomToTopCode = computeBottomToTopTwoOps() || computeBottomToTopCode() || null
+
   const matched = matchOptions(finalCode || bottomToTopCode, optionsText)
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950">
-      {/* Compact Header */}
+      {/* HEADER */}
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10 py-2 md:py-3 px-3 md:px-6">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
@@ -145,20 +199,20 @@ export default function Tier2Solver() {
         </div>
       </header>
 
-      {/* Main Content */}
+      {/* MAIN CONTENT */}
       <div className="flex-1 py-2 md:py-4 px-3 md:px-4">
         <div className="max-w-5xl mx-auto space-y-2 md:space-y-3">
-          {/* Step 1: Top Row */}
-          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-2 md:p-3">
+          {/* TOP ROW */}
+          <div className="bg-white dark:bg-slate-800 rounded-lg border p-2 md:p-3">
             <h2 className="text-sm md:text-base font-semibold text-blue-900 dark:text-blue-100 mb-2">Top Row</h2>
 
-            <div className="flex gap-1.5 md:gap-2 flex-wrap mb-2">
+            <div className="flex gap-1.5 flex-wrap mb-2">
               {shapeSet.map((s, i) => (
                 <button
                   key={i}
                   onClick={() => clickInput(s)}
                   disabled={inputSeq.length >= n}
-                  className="w-10 h-10 md:w-12 md:h-12 text-xl md:text-2xl border-2 border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all"
+                  className="w-10 h-10 md:w-12 md:h-12 text-xl md:text-2xl border rounded bg-white dark:bg-slate-700 hover:bg-slate-50 disabled:opacity-50 flex items-center justify-center"
                 >
                   {s}
                 </button>
@@ -166,31 +220,29 @@ export default function Tier2Solver() {
             </div>
 
             <div className="flex gap-1.5 items-center">
-              <div className="flex-1 p-2 bg-blue-50 dark:bg-slate-900 rounded border border-blue-200 dark:border-blue-700 font-mono text-sm md:text-base font-bold text-blue-600 dark:text-blue-400 tracking-widest min-h-9 flex items-center">
+              <div className="flex-1 p-2 bg-blue-50 dark:bg-slate-900 rounded border font-mono">
                 {inputSeq.join(" ") || "—"}
               </div>
+
               {inputSeq.length > 0 && (
-                <button
-                  onClick={removeLastInput}
-                  className="px-2 py-1.5 text-xs bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-200 rounded hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors flex-shrink-0"
-                >
+                <button onClick={removeLastInput} className="px-2 py-1.5 text-xs bg-orange-100 rounded">
                   Undo
                 </button>
               )}
             </div>
           </div>
 
-          {/* Step 2: Bottom Row */}
-          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-2 md:p-3">
-            <h2 className="text-sm md:text-base font-semibold text-slate-900 dark:text-slate-100 mb-2">Bottom Row</h2>
+          {/* BOTTOM ROW */}
+          <div className="bg-white dark:bg-slate-800 rounded-lg border p-2 md:p-3">
+            <h2 className="text-sm md:text-base font-semibold mb-2">Bottom Row</h2>
 
-            <div className="flex gap-1.5 md:gap-2 flex-wrap mb-2">
+            <div className="flex gap-1.5 flex-wrap mb-2">
               {shapeSet.map((s, i) => (
                 <button
                   key={i}
                   onClick={() => clickOutput(s)}
                   disabled={outputSeq.length >= n}
-                  className="w-10 h-10 md:w-12 md:h-12 text-xl md:text-2xl border-2 border-slate-400 dark:border-slate-500 rounded bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all"
+                  className="w-10 h-10 md:w-12 md:h-12 text-xl border rounded bg-slate-50 hover:bg-slate-100"
                 >
                   {s}
                 </button>
@@ -198,98 +250,85 @@ export default function Tier2Solver() {
             </div>
 
             <div className="flex gap-1.5 items-center">
-              <div className="flex-1 p-2 bg-slate-100 dark:bg-slate-900 rounded border border-slate-300 dark:border-slate-700 font-mono text-sm md:text-base font-bold text-slate-900 dark:text-slate-100 tracking-widest min-h-9 flex items-center">
-                {outputSeq.join(" ") || "—"}
-              </div>
+              <div className="flex-1 p-2 bg-slate-100 rounded border font-mono">{outputSeq.join(" ") || "—"}</div>
+
               {outputSeq.length > 0 && (
-                <button
-                  onClick={removeLastOutput}
-                  className="px-2 py-1.5 text-xs bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-200 rounded hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors flex-shrink-0"
-                >
+                <button onClick={removeLastOutput} className="px-2 py-1.5 text-xs bg-orange-100 rounded">
                   Undo
                 </button>
               )}
             </div>
           </div>
 
-          {/* Step 3: Operator */}
-          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-2 md:p-3">
-            <h2 className="text-sm md:text-base font-semibold text-purple-900 dark:text-purple-100 mb-2">Operator</h2>
+          {/* OPERATORS */}
+          <div className="bg-white dark:bg-slate-800 rounded-lg border p-2 md:p-3">
+            <h2 className="text-sm md:text-base font-semibold mb-2">Operators (Two Ops)</h2>
 
-            <input
-              value={middleOp}
-              onChange={(e) => setMiddleOp(e.target.value.replace(/[^0-9]/g, ""))}
-              placeholder={n === 4 ? "1324" : n === 6 ? "241356" : "12345"}
-              maxLength={n}
-              className="w-full px-2 md:px-3 py-2 text-base md:text-lg tracking-widest border-2 border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-purple-500 dark:focus:border-purple-400 focus:outline-none"
-            />
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              {middleOp.length}/{n}
-            </p>
+            <div className="flex flex-col sm:flex-row gap-1.5 md:gap-2">
+              <div className="flex-1 flex flex-col">
+                <label className="text-xs text-slate-600 dark:text-slate-400 mb-1">Op 1</label>
+                <input
+                  value={middleOp}
+                  onChange={(e) => setMiddleOp(e.target.value.replace(/[^0-9]/g, ""))}
+                  placeholder={Array(n).fill("0").join("")}
+                  maxLength={n}
+                  className="px-2 py-1.5 text-sm md:text-base border rounded bg-white dark:bg-slate-700 font-mono"
+                />
+              </div>
+
+              <div className="flex-1 flex flex-col">
+                <label className="text-xs text-slate-600 dark:text-slate-400 mb-1">Op 2</label>
+                <input
+                  value={middleOp2}
+                  onChange={(e) => setMiddleOp2(e.target.value.replace(/[^0-9]/g, ""))}
+                  placeholder={Array(n).fill("0").join("")}
+                  maxLength={n}
+                  className="px-2 py-1.5 text-sm md:text-base border rounded bg-white dark:bg-slate-700 font-mono"
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Results Section */}
+          {/* RESULTS */}
           {(finalCode || bottomToTopCode) && (
-            <div className="bg-green-50 dark:bg-green-950 rounded-lg border-2 border-green-200 dark:border-green-800">
-              <div className="px-2 md:px-3 py-2 bg-green-100 dark:bg-green-900 border-b border-green-200 dark:border-green-800">
-                <h2 className="text-sm md:text-base font-semibold text-green-900 dark:text-green-100">Results</h2>
-              </div>
-
-              <div className="px-2 md:px-3 py-2 space-y-1.5">
-                <div className="grid grid-cols-2 gap-1.5">
-                  <div className="bg-white dark:bg-slate-800 p-2 rounded border border-blue-300 dark:border-blue-700">
-                    <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-1">Top→Bottom</p>
-                    <div className="font-mono text-lg md:text-xl font-bold text-blue-600 dark:text-blue-400 text-center tracking-widest">
-                      {finalCode || "—"}
-                    </div>
-                  </div>
-
-                  <div className="bg-white dark:bg-slate-800 p-2 rounded border border-purple-300 dark:border-purple-700">
-                    <p className="text-xs font-semibold text-purple-700 dark:text-purple-300 mb-1">Bottom→Top</p>
-                    <div className="font-mono text-lg md:text-xl font-bold text-purple-600 dark:text-purple-400 text-center tracking-widest">
-                      {bottomToTopCode || "—"}
-                    </div>
-                  </div>
+            <div className="bg-green-50 dark:bg-green-950 rounded-lg border-2 p-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-white p-2 rounded border">
+                  <p className="text-xs font-semibold">Top → Bottom</p>
+                  <div className="font-mono text-xl text-center">{finalCode || "—"}</div>
                 </div>
 
-                {/* MCQ Options */}
-                <div className="pt-1.5 border-t border-green-200 dark:border-green-800">
-                  <label className="block text-xs font-medium text-green-900 dark:text-green-100 mb-1">
-                    MCQ Options
-                  </label>
-                  <textarea
-                    value={optionsText}
-                    onChange={(e) => setOptionsText(e.target.value)}
-                    placeholder="Enter options"
-                    className="w-full px-2 py-1.5 text-xs border-2 border-green-300 dark:border-green-700 rounded bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-green-500 dark:focus:border-green-400 focus:outline-none resize-none font-mono"
-                    rows={2}
-                  />
+                <div className="bg-white p-2 rounded border">
+                  <p className="text-xs font-semibold">Bottom → Top</p>
+                  <div className="font-mono text-xl text-center">{bottomToTopCode || "—"}</div>
                 </div>
-
-                {/* Match Result */}
-                {matched && (
-                  <div className="p-2 bg-green-100 dark:bg-green-900 border border-green-400 dark:border-green-700 rounded flex items-center gap-2 text-xs">
-                    <span className="bg-green-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs flex-shrink-0 font-bold">
-                      ✓
-                    </span>
-                    <p className="font-bold text-green-800 dark:text-green-100">
-                      Match: <span>{matched}</span>
-                    </p>
-                  </div>
-                )}
-                {!matched && optionsText.length > 0 && (
-                  <div className="p-2 bg-amber-50 dark:bg-amber-900 border border-amber-300 dark:border-amber-700 rounded text-xs text-amber-800 dark:text-amber-200">
-                    ⚠ No match found
-                  </div>
-                )}
               </div>
+
+              {/* MCQ */}
+              <div className="mt-2">
+                <textarea
+                  value={optionsText}
+                  onChange={(e) => setOptionsText(e.target.value)}
+                  placeholder="Enter options"
+                  className="w-full px-2 py-1.5 text-xs border rounded bg-white font-mono"
+                  rows={2}
+                />
+              </div>
+
+              {/* MATCH */}
+              {matched && (
+                <div className="p-2 bg-green-100 border rounded mt-2 text-xs font-bold">Match: {matched}</div>
+              )}
+              {!matched && optionsText.length > 0 && (
+                <div className="p-2 bg-amber-100 border rounded mt-2 text-xs">No match found</div>
+              )}
             </div>
           )}
 
-          {/* Reset Button */}
+          {/* RESET */}
           <button
             onClick={resetAll}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded-lg hover:bg-red-200 dark:hover:bg-red-800 font-medium transition-colors text-sm"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-100 text-red-700 rounded-lg"
           >
             <RotateCcw size={16} />
             Reset
@@ -297,32 +336,27 @@ export default function Tier2Solver() {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="bg-slate-100 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 mt-2">
-        <div className="max-w-5xl mx-auto px-3 md:px-6 py-2 md:py-3">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-          
+      {/* FOOTER */}
+      <footer className="bg-slate-100 border-t mt-2">
+        <div className="max-w-5xl mx-auto px-3 py-2">
+          <div className="flex justify-between">
+            <a
+              href="https://github.com/Jefino9488"
+              target="_blank"
+              className="flex items-center gap-1 px-2 py-1.5 text-xs bg-slate-800 text-white rounded"
+              rel="noreferrer"
+            >
+              <GitBranch size={14} /> GitHub
+            </a>
 
-            <div className="flex gap-1.5 flex-wrap">
-              <a
-                href="https://github.com/Jefino9488"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 px-2 py-1.5 text-xs bg-slate-800 dark:bg-slate-700 text-white rounded hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors font-medium"
-              >
-                <GitBranch size={14} />
-                GitHub
-              </a>
-              <a
-                href="https://buymeacoffee.com/jefino"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 px-2 py-1.5 text-xs bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors font-medium"
-              >
-                <Coffee size={14} />
-                Coffee
-              </a>
-            </div>
+            <a
+              href="https://buymeacoffee.com/jefino"
+              target="_blank"
+              className="flex items-center gap-1 px-2 py-1.5 text-xs bg-orange-500 text-white rounded"
+              rel="noreferrer"
+            >
+              <Coffee size={14} /> Coffee
+            </a>
           </div>
         </div>
       </footer>
