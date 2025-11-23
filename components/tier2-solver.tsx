@@ -268,8 +268,18 @@ export default function Tier2Solver() {
               <div className="flex-1 flex flex-col">
                 <label className="text-xs text-slate-600 dark:text-slate-400 mb-1">Op 1</label>
                 <input
+                  type="tel"
+                  inputMode="numeric"
                   value={middleOp}
                   onChange={(e) => setMiddleOp(e.target.value.replace(/[^0-9]/g, ""))}
+                  onKeyDown={(e) => {
+                    if (
+                      !/[0-9]/.test(e.key) &&
+                      !["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab"].includes(e.key)
+                    ) {
+                      e.preventDefault()
+                    }
+                  }}
                   placeholder={Array(n).fill("0").join("")}
                   maxLength={n}
                   className="px-2 py-1.5 text-sm md:text-base border rounded bg-white dark:bg-slate-700 font-mono"
@@ -279,8 +289,18 @@ export default function Tier2Solver() {
               <div className="flex-1 flex flex-col">
                 <label className="text-xs text-slate-600 dark:text-slate-400 mb-1">Op 2</label>
                 <input
+                  type="tel"
+                  inputMode="numeric"
                   value={middleOp2}
                   onChange={(e) => setMiddleOp2(e.target.value.replace(/[^0-9]/g, ""))}
+                  onKeyDown={(e) => {
+                    if (
+                      !/[0-9]/.test(e.key) &&
+                      !["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab"].includes(e.key)
+                    ) {
+                      e.preventDefault()
+                    }
+                  }}
                   placeholder={Array(n).fill("0").join("")}
                   maxLength={n}
                   className="px-2 py-1.5 text-sm md:text-base border rounded bg-white dark:bg-slate-700 font-mono"
