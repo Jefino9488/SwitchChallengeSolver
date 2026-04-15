@@ -1,30 +1,5 @@
-# Tier2 Solver renumber
+# Deductive Switch Analyzer Challenge Solver
 
-*Automatically synced with your [v0.app](https://v0.app) deployments*
+A powerful application designed to crack deductive reasoning tests, flowchart routing, and sequence transformation puzzles commonly used in corporate cognitive assessments (e.g., Capgemini, IBM). 
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/jefino9488s-projects/v0-tier2-solver-renumber)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.app-black?style=for-the-badge)](https://v0.app/chat/gktMY0Ef66y)
-
-## Overview
-
-This repository will stay in sync with your deployed chats on [v0.app](https://v0.app).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.app](https://v0.app).
-
-## Deployment
-
-Your project is live at:
-
-**[https://vercel.com/jefino9488s-projects/v0-tier2-solver-renumber](https://vercel.com/jefino9488s-projects/v0-tier2-solver-renumber)**
-
-## Build your app
-
-Continue building your app on:
-
-**[https://v0.app/chat/gktMY0Ef66y](https://v0.app/chat/gktMY0Ef66y)**
-
-## How It Works
-
-1. Create and modify your project using [v0.app](https://v0.app)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+Whether you are trying to understand how a sequence of inputs is reordered or trying to identify which specific operator (switch) caused a state change, this tool helps you deduce the underlying logic with ease.
